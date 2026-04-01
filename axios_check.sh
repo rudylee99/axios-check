@@ -79,6 +79,7 @@ echo ""
 echo "[2/6] Checking lockfiles for compromised versions across $SEARCH_ROOT ..."
 PKG_LOCK_HITS=$(machine_find -type f -name "package-lock.json" | head -n 200)
 YARN_LOCK_HITS=$(machine_find -type f -name "yarn.lock" | head -n 200)
+PNPM_LOCK_HITS=$(machine_find -type f -name "pnpm-lock.yaml" | head -n 200)
 
 LOCK_HIT=""
 if [ -n "$PKG_LOCK_HITS" ]; then
@@ -86,6 +87,9 @@ if [ -n "$PKG_LOCK_HITS" ]; then
 fi
 if [ -n "$YARN_LOCK_HITS" ]; then
   LOCK_HIT+=$'\n'$(echo "$YARN_LOCK_HITS" | xargs -r grep -H -E 'axios@.*(1\.14\.1|0\.30\.4)|version[[:space:]]+"(1\.14\.1|0\.30\.4)"' 2>/dev/null | head -n 10)
+fi
+if [ -n "$PNPM_LOCK_HITS" ]; then
+  LOCK_HIT+=$'\n'$(echo "$PNPM_LOCK_HITS" | xargs -r grep -H -E 'axios.*[0-9]\.(1\.14\.1|0\.30\.4)|version:[[:space:]]+(1\.14\.1|0\.30\.4)' 2>/dev/null | head -n 10)
 fi
 
 if [ -n "$(echo "$LOCK_HIT" | sed '/^[[:space:]]*$/d')" ]; then
@@ -103,7 +107,7 @@ GIT_HIT=""
 REPO_DIRS=$(machine_find -type d -name ".git" | sed 's#/\.git$##' | head -n 100)
 if [ -n "$REPO_DIRS" ]; then
   while IFS= read -r repo; do
-    HIT=$(git -C "$repo" log -p -- package-lock.json yarn.lock 2>/dev/null | grep -E "plain-crypto-js" | head -1)
+    HIT=$(git -C "$repo" log -p -- package-lock.json yarn.lock pnpm-lock.yaml 2>/dev/null | grep -E "plain-crypto-js" | head -1)
     if [ -n "$HIT" ]; then
       GIT_HIT+="$repo: $HIT"$'\n'
     fi
